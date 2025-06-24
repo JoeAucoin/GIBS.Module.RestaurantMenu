@@ -23,7 +23,7 @@ namespace GIBS.Module.RestaurantMenu.Services
 
         Task<List<MenuItem>> GetMenuItemsWithAttributesAsync(int moduleId);
 
-        
+        Task<int> GetMaxSortOrderByCategoryAsync(int categoryId, int moduleId);
 
         //Task<List<Models.MenuItem>> GetMenuItemsAsync(int moduleId);
         //Task<Models.MenuItem> GetMenuItemAsync(int menuItemId, int moduleId);

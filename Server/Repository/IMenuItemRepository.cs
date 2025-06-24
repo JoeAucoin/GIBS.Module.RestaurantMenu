@@ -20,5 +20,7 @@ namespace GIBS.Module.RestaurantMenu.Repository
 
         // Add this:
         Task<List<MenuItem>> GetMenuItemsWithAttributesAsync(int moduleId);
+
+        Task<int> GetMaxSortOrderByCategoryAsync(int categoryId, int moduleId);
     }
 }

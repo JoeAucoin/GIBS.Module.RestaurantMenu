@@ -9,10 +9,12 @@ namespace GIBS.Module.RestaurantMenu.Repository
     public class MenuAttributeRepository : IMenuAttributeRepository
     {
         private readonly RestaurantMenuContext _db;
+        private readonly IDbContextFactory<RestaurantMenuContext> _factory;
 
-        public MenuAttributeRepository(RestaurantMenuContext context)
+        public MenuAttributeRepository(RestaurantMenuContext context, IDbContextFactory<RestaurantMenuContext> factory)
         {
             _db = context;
+            _factory = factory;
         }
 
         public async Task<IEnumerable<MenuAttribute>> GetMenuAttributesAsync(int moduleId)
@@ -47,6 +49,15 @@ namespace GIBS.Module.RestaurantMenu.Repository
                 _db.MenuAttribute.Remove(attribute);
                 await _db.SaveChangesAsync();
             }
+        }
+
+        public async Task<int> GetMaxSortOrderForAttributeAsync(int attributeId, int moduleId)
+        {
+            using var db = _factory.CreateDbContext();
+            return await db.MenuAttribute // Corrected from GIBSMenuAttribute to MenuAttribute
+                .Where(a => a.ModuleId == moduleId)
+                .Select(a => (int?)a.SortOrder)
+                .MaxAsync() ?? 0;
         }
     }
 }

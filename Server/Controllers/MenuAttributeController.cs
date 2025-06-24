@@ -72,5 +72,12 @@ namespace GIBS.Module.RestaurantMenu.Controllers
             await _menuAttributeService.DeleteMenuAttributeAsync(id, moduleid);
             _logger.Log(LogLevel.Information, this, LogFunction.Delete, "Attribute Deleted {AttributeId}", id);
         }
+
+        [HttpGet("max-sortorder")]
+        public async Task<int> GetMaxSortOrderForAttribute(int attributeId, int moduleId)
+        {
+            return await _menuAttributeService.GetMaxSortOrderForAttributeAsync(attributeId, moduleId);
+        }
+
     }
 }

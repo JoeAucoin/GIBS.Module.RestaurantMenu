@@ -96,5 +96,10 @@ namespace GIBS.Module.RestaurantMenu.Services
                 _logger.Log(LogLevel.Error, this, LogFunction.Security, "Unauthorized DeleteMenuAttributeAsync Request For Attribute {AttributeId} And Module {ModuleId}", attributeId, moduleId);
             }
         }
+
+        public async Task<int> GetMaxSortOrderForAttributeAsync(int attributeId, int moduleId)
+        {
+            return await _menuAttributeRepository.GetMaxSortOrderForAttributeAsync(attributeId, moduleId);
+        }
     }
 }

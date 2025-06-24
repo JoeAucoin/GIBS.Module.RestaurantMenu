@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Linq;
 using System.Collections.Generic;
 using Oqtane.Modules;
+using System.Threading.Tasks;
 
 namespace GIBS.Module.RestaurantMenu.Repository
 {
@@ -14,11 +15,6 @@ namespace GIBS.Module.RestaurantMenu.Repository
             _factory = factory;
         }
 
-        //public IEnumerable<Models.RestaurantMenu> GetRestaurantMenus(int ModuleId)
-        //{
-        //    using var db = _factory.CreateDbContext();
-        //    return db.RestaurantMenu.Where(item => item.ModuleId == ModuleId).ToList();
-        //}
         public IEnumerable<Models.RestaurantMenu> GetRestaurantMenus(int ModuleId)
         {
             using var db = _factory.CreateDbContext();
@@ -65,6 +61,16 @@ namespace GIBS.Module.RestaurantMenu.Repository
             Models.RestaurantMenu RestaurantMenu = db.RestaurantMenu.Find(RestaurantMenuId);
             db.RestaurantMenu.Remove(RestaurantMenu);
             db.SaveChanges();
+        }
+
+        public async Task<int> GetMaxSortOrderForMenuAsync(int moduleId)
+        {
+            using var db = _factory.CreateDbContext();
+            // Assuming your entity is called RestaurantMenu and has a SortOrder property
+            return await db.RestaurantMenu
+                .Where(m => m.ModuleId == moduleId)
+                .Select(m => (int?)m.SortOrder)
+                .MaxAsync() ?? 0;
         }
     }
 }

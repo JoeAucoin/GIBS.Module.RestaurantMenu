@@ -11,5 +11,7 @@ namespace GIBS.Module.RestaurantMenu.Repository
         Models.RestaurantMenu AddRestaurantMenu(Models.RestaurantMenu RestaurantMenu);
         Models.RestaurantMenu UpdateRestaurantMenu(Models.RestaurantMenu RestaurantMenu);
         void DeleteRestaurantMenu(int RestaurantMenuId);
+
+        Task<int> GetMaxSortOrderForMenuAsync(int moduleId);
     }
 }

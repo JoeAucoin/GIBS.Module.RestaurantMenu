@@ -11,5 +11,7 @@ namespace GIBS.Module.RestaurantMenu.Repository
         Task<MenuAttribute> AddMenuAttributeAsync(MenuAttribute attribute);
         Task<MenuAttribute> UpdateMenuAttributeAsync(MenuAttribute attribute);
         Task DeleteMenuAttributeAsync(int attributeId);
+
+        Task<int> GetMaxSortOrderForAttributeAsync(int attributeId, int moduleId);
     }
 }

@@ -113,6 +113,13 @@
                     _modifiedon = RestaurantMenu.ModifiedOn;
                 }
             }
+            else
+            {
+                _isActive = true; // Default value for new menu
+                //_sortOrder = "0"; // Default sort order for new menu
+                var maxSortOrder = await RestaurantMenuService.GetMaxSortOrderForMenuAsync(ModuleState.ModuleId);
+                _sortOrder = (maxSortOrder + 10).ToString();
+            }
         }
         catch (Exception ex)
         {

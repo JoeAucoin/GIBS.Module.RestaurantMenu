@@ -123,6 +123,12 @@
   <data name="Delete.Text" xml:space="preserve">
     <value>Delete</value>
   </data>
+  <data name="Dialog.DeleteAttributeHeader" xml:space="preserve">
+    <value>Delete Attribute</value>
+  </data>
+  <data name="Dialog.DeleteAttributeMessage" xml:space="preserve">
+    <value>Are you sure you want to delete this attrribute?</value>
+  </data>
   <data name="EditButton" xml:space="preserve">
     <value>Edit</value>
   </data>

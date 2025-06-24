@@ -115,5 +115,15 @@ namespace GIBS.Module.RestaurantMenu.Repository
                 .ThenBy(m => m.ItemName)
                 .ToListAsync();
         }
+
+        public async Task<int> GetMaxSortOrderByCategoryAsync(int categoryId, int moduleId)
+        {
+            using var db = _factory.CreateDbContext();
+            return await db.MenuItem
+                .Where(mi => mi.CategoryId == categoryId && mi.ModuleId == moduleId)
+                .Select(mi => (int?)mi.SortOrder)
+                .MaxAsync() ?? 0;
+        }
+
     }
 }

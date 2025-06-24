@@ -4,6 +4,8 @@
 @using Oqtane.Modules.Controls
 @using Oqtane.UI
 @using System.Linq
+@using Microsoft.AspNetCore.Authorization
+@using System.Net
 
 @namespace GIBS.Module.RestaurantMenu
 @inherits ModuleBase
@@ -36,11 +38,15 @@
             <div class="row mb-1 align-items-center">
                 <Label Class="col-sm-3" For="categoryId" HelpText="Select the category for this item." ResourceKey="Label.Category" />
                 <div class="col-sm-9">
-                    <select id="categoryId" class="form-control" @bind="_menuItem.CategoryId" required>
+                    <select id="categoryId" class="form-control"
+                            @onchange="OnCategoryChanged"
+                            required>
                         <option value="0">@Localizer["Select.Category"]</option>
                         @foreach (var category in _filteredCategories)
                         {
-                            <option value="@category.CategoryId">@category.CategoryName</option>
+                            <option value="@category.CategoryId" selected="@(_menuItem.CategoryId == category.CategoryId)">
+                                @category.CategoryName
+                            </option>
                         }
                     </select>
                     <div class="invalid-feedback">@Localizer["Validation.Category.Required"]</div>
@@ -349,6 +355,8 @@ else
     private int? _editOptionId = null;
     private MenuOption _editOption = new();
 
+    private string _returnurl = string.Empty;
+
     private bool _isEditingOption = false;
     private int? _editingOptionId = null;
 
@@ -404,6 +412,25 @@ else
         };
     }
 
+    private async Task OnCategoryChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int newCategoryId))
+        {
+            _menuItem.CategoryId = newCategoryId;
+
+            // Only fetch if a valid category is selected
+            if (newCategoryId > 0)
+            {
+                var maxSortOrder = await MenuItemService.GetMaxSortOrderByCategoryAsync(newCategoryId, ModuleState.ModuleId);
+                _menuItem.SortOrder = maxSortOrder + 10;
+            }
+            else
+            {
+                _menuItem.SortOrder = 0;
+            }
+        }
+    }
+
     private void CancelEditOption()
     {
         _isEditingOption = false;
@@ -437,7 +464,7 @@ else
             return;
         }
         _newMenuOption.ItemId = _menuItem.ItemId;
-     //   _newMenuOption.IsActive = true;
+        //   _newMenuOption.IsActive = true;
 
         if (_isEditingOption && _editingOptionId.HasValue)
         {
@@ -495,6 +522,11 @@ else
         }
         try
         {
+            if (PageState.QueryString.ContainsKey("returnurl") && PageState.QueryString.TryGetValue("returnurl", out var returnurl))
+            {
+                _returnurl = returnurl.ToString();
+            }
+
             _restaurantMenus = (await RestaurantMenuService.GetRestaurantMenusAsync(ModuleState.ModuleId)).ToList();
             _allCategories = (await MenuCategoryService.GetMenuCategoriesAsync(ModuleState.ModuleId)).ToList();
 
@@ -607,10 +639,20 @@ else
 
     private string ReturnUrl()
     {
-        if (ModuleState != null)
+        if(!string.IsNullOrEmpty(_returnurl))
+        {
+           // var myReturnUrl = WebUtility.HtmlDecode(_returnurl);
+            return NavigateUrl();
+        }
+        
+        else if (ModuleState != null)
         {
             return (!string.IsNullOrEmpty(NavigateUrl() + "/*/" + ModuleState.ModuleId + "/MenuItems")) ? NavigateUrl() + "/*/" + ModuleState.ModuleId + "/MenuItems" : NavigateUrl();
         }
-        return NavigateUrl();
+        else
+        {
+            return NavigateUrl();
+        }
+    //    return NavigateUrl();
     }
 }

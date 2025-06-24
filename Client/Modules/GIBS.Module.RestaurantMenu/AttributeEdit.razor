@@ -107,6 +107,7 @@ else
     private bool _isEditMode = false;
     private bool _initialized = false;
     private string CurrentUserName;
+   // private new Microsoft.JSInterop.IJSRuntime JSRuntime { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -141,8 +142,13 @@ else
                 _menuAttribute = new MenuAttribute
                 {
                     IsActive = true,
-                    ModuleId = ModuleState.ModuleId
+                    ModuleId = ModuleState.ModuleId,
+                    AttributeColor = "#000000", // <-- Set your default color here
+                    SortOrder = 0 // <-- Set your default sort order here
                 };
+                // Get the max sort order for this module and set the new value
+                var maxSortOrder = await MenuAttributeService.GetMaxSortOrderForAttributeAsync(0, ModuleState.ModuleId);
+                _menuAttribute.SortOrder = maxSortOrder + 10;
             }
             _initialized = true;
         }

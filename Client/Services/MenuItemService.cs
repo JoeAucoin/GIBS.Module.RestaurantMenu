@@ -8,10 +8,12 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
+
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using static System.Net.WebRequestMethods;
+
+
 
 namespace GIBS.Module.RestaurantMenu.Services
 {
@@ -71,9 +73,18 @@ namespace GIBS.Module.RestaurantMenu.Services
             var url = CreateAuthorizationPolicyUrl($"{Apiurl}/withattributes/{moduleId}", EntityNames.Module, moduleId);
             return await GetJsonAsync<List<MenuItem>>(url, new List<MenuItem>());
         }
-        
+
+        public async Task<int> GetMaxSortOrderByCategoryAsync(int categoryId, int moduleId)
+        {
+            var url = $"api/menuitem/max-sortorder?categoryId={categoryId}&moduleId={moduleId}";
+            return await GetJsonAsync<int>(url, 0);
+        }
 
 
+        //public async Task<int> GetMaxSortOrderByCategoryAsync(int categoryId, int moduleId, HttpClient http)
+        //{
+        //    return await http.GetFromJsonAsync<int>($"api/menuitem/max-sortorder?categoryId={categoryId}&moduleId={moduleId}");
+        //}
 
         // Uncommented method for clarity
         // public async Task<int> GetMaxSortOrderByCategoryIdAsync(int categoryId, int moduleId)

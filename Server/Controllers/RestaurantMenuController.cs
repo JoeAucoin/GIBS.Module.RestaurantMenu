@@ -110,5 +110,18 @@ namespace GIBS.Module.RestaurantMenu.Controllers
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
             }
         }
+
+        [HttpGet("max-sortorder")]
+        [Authorize(Policy = PolicyNames.ViewModule)]
+        public async Task<int> GetMaxSortOrderForMenu([FromQuery] int moduleid)
+        {
+            if (!IsAuthorizedEntityId(EntityNames.Module, moduleid))
+            {
+                _logger.Log(LogLevel.Error, this, LogFunction.Security, "Unauthorized GetMaxSortOrderForMenu Attempt {ModuleId}", moduleid);
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                return 0;
+            }
+            return await _RestaurantMenuService.GetMaxSortOrderForMenuAsync(moduleid);
+        }
     }
 }

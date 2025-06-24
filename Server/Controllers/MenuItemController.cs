@@ -140,5 +140,12 @@ namespace GIBS.Module.RestaurantMenu.Controllers
             return await _menuItemService.GetMenuItemsWithAttributesAsync(moduleId);
         }
 
+        [HttpGet("max-sortorder")]
+        public async Task<IActionResult> GetMaxSortOrderByCategory(int categoryId, int moduleId)
+        {
+            var maxSortOrder = await _menuItemService.GetMaxSortOrderByCategoryAsync(categoryId, moduleId);
+            return Ok(maxSortOrder);
+        }
+
     }
 }

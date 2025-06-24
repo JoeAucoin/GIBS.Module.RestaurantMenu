@@ -98,5 +98,19 @@ namespace GIBS.Module.RestaurantMenu.Services
             }
             return Task.CompletedTask;
         }
+
+        public Task<int> GetMaxSortOrderForMenuAsync(int moduleId)
+        {
+            if (_userPermissions.IsAuthorized(_accessor.HttpContext.User, _alias.SiteId, EntityNames.Module, moduleId, PermissionNames.Edit))
+            {
+                return _RestaurantMenuRepository.GetMaxSortOrderForMenuAsync(moduleId);
+            }
+            else
+            {
+                _logger.Log(LogLevel.Error, this, LogFunction.Security, "Unauthorized GetMaxSortOrderForMenuAsync Request For Module {ModuleId}", moduleId);
+                return Task.FromResult(0);
+            }
+
+        }
     }
 }

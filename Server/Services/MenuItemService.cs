@@ -64,5 +64,11 @@ namespace GIBS.Module.RestaurantMenu.Services
         {
             return await _menuItemRepository.GetMenuItemsWithAttributesAsync(moduleId);
         }
+
+        public async Task<int> GetMaxSortOrderByCategoryAsync(int categoryId, int moduleId)
+        {
+            return await _menuItemRepository.GetMaxSortOrderByCategoryAsync(categoryId, moduleId);
+        }
+
     }
 }

@@ -14,5 +14,7 @@ namespace GIBS.Module.RestaurantMenu.Services
         Task<Models.RestaurantMenu> UpdateRestaurantMenuAsync(Models.RestaurantMenu RestaurantMenu);
 
         Task DeleteRestaurantMenuAsync(int RestaurantMenuId, int ModuleId);
+
+        Task<int> GetMaxSortOrderForMenuAsync(int moduleId);
     }
 }

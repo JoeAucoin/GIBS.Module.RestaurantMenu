@@ -38,5 +38,16 @@ namespace GIBS.Module.RestaurantMenu.Services
         {
             await DeleteAsync(CreateAuthorizationPolicyUrl($"{Apiurl}/{RestaurantMenuId}/{ModuleId}", EntityNames.Module, ModuleId));
         }
+
+        public async Task<int> GetMaxSortOrderForMenuAsync(int moduleId)
+        {
+            var url = $"{Apiurl}/max-sortorder?moduleid={moduleId}";
+            return await GetJsonAsync<int>(url, 0);
+        }
+        //public async Task<int> GetMaxSortOrderAsync(int ModuleId)
+        //{
+        //    var url = $"{Apiurl}/max-sortorder?moduleId={ModuleId}";
+        //    return await GetJsonAsync<int>(url, 0);
+        //}
     }
 }
