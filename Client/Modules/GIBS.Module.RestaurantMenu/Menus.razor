@@ -1,0 +1,91 @@
+﻿@using GIBS.Module.RestaurantMenu.Services
+@using GIBS.Module.RestaurantMenu.Models
+
+@namespace GIBS.Module.RestaurantMenu
+@inherits ModuleBase
+@inject IRestaurantMenuService RestaurantMenuService
+@inject NavigationManager NavigationManager
+@inject IStringLocalizer<Menus> Localizer
+
+<h3>Menus</h3>
+
+@if (_RestaurantMenus == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <ActionLink Action="Add" Security="SecurityAccessLevel.Edit" Text="Add New Menu" ResourceKey="Add" />
+    <br />
+    <br />
+    @if (@_RestaurantMenus.Count != 0)
+    {
+        <Pager Items="@_RestaurantMenus">
+            <Header>
+            <th style="width: 1px;">&nbsp;</th>
+            <th style="width: 1px;">&nbsp;</th>
+            <th>@Localizer["Name"]</th>
+            <th>@Localizer["Description"]</th>
+            <th>@Localizer["HoursServed"]</th>
+            <th>@Localizer["SortOrder"]</th>
+            <th>@Localizer["IsActive"]</th>
+            </Header>
+            <Row>
+                <td><ActionLink Action="Edit" Parameters="@($"id=" + context.RestaurantMenuId.ToString())" ResourceKey="Edit" Text="Edit" /></td>
+                <td><ActionDialog Header="Delete RestaurantMenu" Text="AD Delete" Message="Are You Sure You Wish To Delete This RestaurantMenu?" Action="Delete" Security="SecurityAccessLevel.Edit" Class="btn btn-danger" OnClick="@(async () => await Delete(context))" ResourceKey="Delete" Id="@context.RestaurantMenuId.ToString()" /></td>
+                <td>@context.Name</td>
+                <td>@context.Description</td>
+                <td>@context.HoursServed</td>
+                <td>@context.SortOrder</td>
+                <td><input id="isActive" type="checkbox" @bind="@context.IsActive" /></td>
+            </Row>
+        </Pager>
+    }
+    else
+    {
+        <p>@Localizer["Message.DisplayNone"]</p>
+    }
+
+    <div><NavLink class="btn btn-secondary" href="@NavigateUrl()">@Localizer["Return"]</NavLink></div>
+}
+
+@code {
+    public override string RenderMode => RenderModes.Static;
+
+    public override List<Resource> Resources => new List<Resource>()
+    {
+        new Resource { ResourceType = ResourceType.Stylesheet, Url = ModulePath() + "Module.css" },
+        new Resource { ResourceType = ResourceType.Script, Url = ModulePath() + "Module.js" }
+    };
+
+    List<RestaurantMenu> _RestaurantMenus;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _RestaurantMenus = await RestaurantMenuService.GetRestaurantMenusAsync(ModuleState.ModuleId);
+        }
+        catch (Exception ex)
+        {
+            await logger.LogError(ex, "Error Loading RestaurantMenu {Error}", ex.Message);
+            AddModuleMessage(Localizer["Message.LoadError"], MessageType.Error);
+        }
+    }
+
+    private async Task Delete(RestaurantMenu RestaurantMenu)
+    {
+        try
+        {
+            await RestaurantMenuService.DeleteRestaurantMenuAsync(RestaurantMenu.RestaurantMenuId, ModuleState.ModuleId);
+            await logger.LogInformation("RestaurantMenu Deleted {RestaurantMenu}", RestaurantMenu);
+            _RestaurantMenus = await RestaurantMenuService.GetRestaurantMenusAsync(ModuleState.ModuleId);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await logger.LogError(ex, "Error Deleting RestaurantMenu {RestaurantMenu} {Error}", RestaurantMenu, ex.Message);
+            AddModuleMessage(Localizer["Message.DeleteError"], MessageType.Error);
+        }
+    }
+}

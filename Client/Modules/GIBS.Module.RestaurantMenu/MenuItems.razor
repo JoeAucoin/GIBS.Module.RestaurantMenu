@@ -1,0 +1,332 @@
+﻿@using GIBS.Module.RestaurantMenu.Models
+@using GIBS.Module.RestaurantMenu.Services
+@using Oqtane.Modules.Controls
+@using System.Linq
+@using System.Globalization
+
+@namespace GIBS.Module.RestaurantMenu
+@inherits ModuleBase
+@inject IMenuItemService MenuItemService
+@inject IMenuCategoryService MenuCategoryService
+@inject IRestaurantMenuService RestaurantMenuService
+@inject NavigationManager NavigationManager
+@inject IStringLocalizer<MenuItems> Localizer
+
+<style>
+    .sortable-header {
+        cursor: pointer;
+    }
+
+        .sortable-header .oi {
+            font-size: 0.8em;
+            margin-left: 4px;
+        }
+</style>
+
+<TabStrip>
+    <TabPanel Name="MenuItems" ResourceKey="Tab.MenuItems">
+        @if (_menuItems != null)
+        {
+            <div class="container">
+                <div class="row mb-3">
+                    <div class="col">
+                        <ActionLink Action="MenuItemsEdit" Security="SecurityAccessLevel.Edit" Class="btn btn-primary" ResourceKey="Button.AddItem" Text="@Localizer["Button.AddItem"]" />
+                        <select class="form-select d-inline w-auto me-2"
+                                @bind="_selectedRestaurantMenuId">
+                            <option value="">@Localizer["All Menus"]</option>
+                            @foreach (var menu in _restaurantMenus)
+                            {
+                                <option value="@menu.RestaurantMenuId">@menu.Name</option>
+                            }
+                        </select>
+
+                        <select class="form-select d-inline w-auto"
+                                @bind="_selectedCategoryId">
+                            <option value="">@Localizer["All Categories"]</option>
+                            @foreach (var cat in GetFilteredCategories())
+                            {
+                                <option value="@cat.CategoryId">@cat.CategoryName</option>
+                            }
+                        </select>
+                    
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 1%;">&nbsp;</th>
+                                    <th style="width: 1%;">&nbsp;</th>
+                                    <th class="sortable-header" @onclick='() => SortTable("ItemName")'>
+                                        @Localizer["Th.ItemName"] <span class="oi @GetSortIcon("ItemName")"></span>
+                                    </th>
+                                    <th class="sortable-header" @onclick='() => SortTable("MenuName")'>
+                                        @Localizer["Th.Menu"] <span class="oi @GetSortIcon("MenuName")"></span>
+                                    </th>
+                                    <th class="sortable-header" @onclick='() => SortTable("CategoryName")'>
+                                        @Localizer["Th.Category"] <span class="oi @GetSortIcon("CategoryName")"></span>
+                                    </th>
+                                    <th>@Localizer["Th.Price"]</th>
+                                    <th class="sortable-header" @onclick='() => SortTable("SortOrder")'>
+                                        @Localizer["Th.SortOrder"] <span class="oi @GetSortIcon("SortOrder")"></span>
+                                    </th>
+                                    <th>@Localizer["Th.IsNewItem"]</th>
+                                    <th>@Localizer["Th.IsActive"]</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                              
+                                @foreach (var menuItem in GetPagedMenuItems())
+                                {
+                                    <tr>
+                                        <td>
+                                            <ActionLink Action="MenuItemsEdit" Parameters="@($"id={menuItem.ItemId}")"
+                                                        Security="SecurityAccessLevel.Edit"
+                                                        Class="btn btn-secondary" Text="@Localizer["Button.Edit"]"
+                                                        ResourceKey="Button.Edit" />
+                                        </td>
+                                        <td>
+                                            <ActionDialog Header="@Localizer["Dialog.DeleteItemHeader"]"
+                                                          Message="@Localizer["Dialog.DeleteItemMessage", menuItem.ItemName]"
+                                                          Action="Delete" Security="SecurityAccessLevel.Edit"
+                                                          Class="btn btn-danger"
+                                                          OnClick="@(() => DeleteMenuItem(menuItem.ItemId))"
+                                                          ResourceKey="Button.Delete" Id="@menuItem.ItemId.ToString()" />
+                                        </td>
+                                        <td>@menuItem.ItemName</td>
+                                        <td>@GetMenuName(menuItem.RestaurantMenuId)</td>
+                                        <td>@GetCategoryName(menuItem.CategoryId)</td>
+                                        <td>@FormatCurrency(menuItem.ItemPrice)</td>
+                                        <td>@menuItem.SortOrder</td>
+                                        <td><input type="checkbox" class="form-check-input" @bind="menuItem.IsNewItem" disabled /></td>
+                                        <td><input type="checkbox" class="form-check-input" @bind="menuItem.IsActive" disabled /></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+
+                        @if (TotalPages > 1)
+                        {
+                            <nav aria-label="Menu item pagination">
+                                <ul class="pagination justify-content-center">
+                                    <li class="page-item @( _currentPage == 1 ? "disabled" : "" )">
+                                        <button class="page-link" @onclick="() => GoToPage(_currentPage - 1)">Previous</button>
+                                    </li>
+                                    @for (int i = 1; i <= TotalPages; i++)
+                                    {
+                                        <li class="page-item @( _currentPage == i ? "active" : "" )">
+                                            <button class="page-link" @onclick="() => GoToPage(i)">@i</button>
+                                        </li>
+                                    }
+                                    <li class="page-item @( _currentPage == TotalPages ? "disabled" : "" )">
+                                        <button class="page-link" @onclick="() => GoToPage(_currentPage + 1)">Next</button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        }
+
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <p><em>@Localizer["Loading"]</em></p>
+        }
+    </TabPanel>
+    <TabPanel Name="Sections" ResourceKey="Tab.Sections">
+        <Sections />
+    </TabPanel>
+    <TabPanel Name="Attribute" ResourceKey="Tab.Attribute">
+        <Attribute />
+    </TabPanel>
+</TabStrip>
+
+@code {
+    private List<MenuItem> _menuItems;
+    private List<MenuCategory> _menuCategories;
+    private List<RestaurantMenu> _restaurantMenus;
+    private string _currentSortColumn;
+    private bool _isSortAscending = true;
+
+    private int? _selectedRestaurantMenuIdBacking;
+    private int? _selectedRestaurantMenuId
+    {
+        get => _selectedRestaurantMenuIdBacking;
+        set
+        {
+            if (_selectedRestaurantMenuIdBacking != value)
+            {
+                _selectedRestaurantMenuIdBacking = value;
+                _selectedCategoryId = null;
+                _currentPage = 1;
+            }
+        }
+    }
+    private int? _selectedCategoryIdBacking;
+    private int? _selectedCategoryId
+    {
+        get => _selectedCategoryIdBacking;
+        set
+        {
+            if (_selectedCategoryIdBacking != value)
+            {
+                _selectedCategoryIdBacking = value;
+                _currentPage = 1;
+            }
+        }
+    }
+
+    private int _currentPage = 1;
+    private int _pageSize = 25;
+
+    private int TotalPages => (int)Math.Ceiling((double)GetFilteredMenuItems().Count() / _pageSize);
+
+    private IEnumerable<MenuItem> GetPagedMenuItems()
+    {
+        return GetFilteredMenuItems()
+            .Skip((_currentPage - 1) * _pageSize)
+            .Take(_pageSize);
+    }
+
+    private void GoToPage(int page)
+    {
+        if (page < 1) page = 1;
+        if (page > TotalPages) page = TotalPages;
+        _currentPage = page;
+    }
+
+    public override SecurityAccessLevel SecurityAccessLevel => SecurityAccessLevel.Edit;
+   // public RequestCulture(CultureInfo culture);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _menuItems = (await MenuItemService.GetMenuItemsAsync(ModuleState.ModuleId)).ToList();
+            _menuCategories = (await MenuCategoryService.GetMenuCategoriesAsync(ModuleState.ModuleId)).ToList();
+            _restaurantMenus = (await RestaurantMenuService.GetRestaurantMenusAsync(ModuleState.ModuleId)).ToList();
+        }
+        catch (Exception ex)
+        {
+            await logger.LogError(ex, "Error Loading Data {Error}", ex.Message);
+            AddModuleMessage(Localizer["Error.Load"], MessageType.Error);
+        }
+    }
+
+    private void OnRestaurantMenuChanged(ChangeEventArgs e)
+    {
+        // Reset category filter if menu changes
+        _selectedCategoryId = null;
+    }
+
+    private IEnumerable<MenuCategory> GetFilteredCategories()
+    {
+        // Only show categories for the selected menu
+        return _selectedRestaurantMenuId.HasValue
+            ? _menuCategories.Where(c => c.RestaurantMenuId == _selectedRestaurantMenuId)
+            : _menuCategories;
+    }
+
+    private IEnumerable<MenuItem> GetFilteredMenuItems()
+    {
+        var items = _menuItems.AsEnumerable();
+        if (_selectedRestaurantMenuId.HasValue)
+            items = items.Where(i => i.RestaurantMenuId == _selectedRestaurantMenuId);
+        if (_selectedCategoryId.HasValue)
+            items = items.Where(i => i.CategoryId == _selectedCategoryId);
+        return items;
+    }
+
+   
+
+    private void OnCategoryChanged(ChangeEventArgs e)
+    {
+        // No-op, but you can add logic if needed
+    }
+
+    private void SortTable(string columnName)
+    {
+        if (columnName == _currentSortColumn)
+        {
+            _isSortAscending = !_isSortAscending;
+        }
+        else
+        {
+            _currentSortColumn = columnName;
+            _isSortAscending = true;
+        }
+
+        switch (columnName)
+        {
+            case "ItemName":
+                _menuItems = _isSortAscending ? _menuItems.OrderBy(x => x.ItemName).ToList() : _menuItems.OrderByDescending(x => x.ItemName).ToList();
+                break;
+            case "MenuName":
+                _menuItems = _isSortAscending ? _menuItems.OrderBy(x => GetMenuName(x.RestaurantMenuId)).ToList() : _menuItems.OrderByDescending(x => GetMenuName(x.RestaurantMenuId)).ToList();
+                break;
+            case "CategoryName":
+                _menuItems = _isSortAscending ? _menuItems.OrderBy(x => GetCategoryName(x.CategoryId)).ToList() : _menuItems.OrderByDescending(x => GetCategoryName(x.CategoryId)).ToList();
+                break;
+            case "SortOrder":
+                _menuItems = _isSortAscending ? _menuItems.OrderBy(x => x.SortOrder).ToList() : _menuItems.OrderByDescending(x => x.SortOrder).ToList();
+                break;
+        }
+        StateHasChanged();
+    }
+
+    private string GetSortIcon(string columnName)
+    {
+        if (_currentSortColumn != columnName)
+        {
+            return "oi-elevator"; // Default icon for unsorted columns
+        }
+        return _isSortAscending ? "oi-sort-ascending" : "oi-sort-descending";
+    }
+
+    private string FormatCurrency(decimal price)
+    {
+        try
+        {
+
+            var cultureInfo = new System.Globalization.CultureInfo("en-US"); // Example: US Dollar
+            var outputCurrencyString = price.ToString("C", cultureInfo);
+
+            return outputCurrencyString;
+        }
+        catch (Exception ex)
+        {
+            // Fallback for safety, though this should rarely be hit.
+            logger.LogError(ex, "Could not format currency using CurrentUICulture.");
+            return price.ToString("C");
+        }
+    }
+
+    private string GetCategoryName(int categoryId)
+    {
+        return _menuCategories?.FirstOrDefault(c => c.CategoryId == categoryId)?.CategoryName ?? Localizer["Unknown"];
+    }
+
+    private string GetMenuName(int menuId)
+    {
+        return _restaurantMenus?.FirstOrDefault(m => m.RestaurantMenuId == menuId)?.Name ?? Localizer["Unknown"];
+    }
+
+    private async Task DeleteMenuItem(int menuItemId)
+    {
+        try
+        {
+            await MenuItemService.DeleteMenuItemAsync(menuItemId, ModuleState.ModuleId);
+            await logger.LogInformation("Menu Item Deleted {MenuItemId}", menuItemId);
+            AddModuleMessage(Localizer["Success.Delete"], MessageType.Success);
+            _menuItems = (await MenuItemService.GetMenuItemsAsync(ModuleState.ModuleId)).ToList();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await logger.LogError(ex, "Error Deleting Menu Item {MenuItemId} {Error}", menuItemId, ex.Message);
+            AddModuleMessage(Localizer["Error.Delete"], MessageType.Error);
+        }
+    }
+}

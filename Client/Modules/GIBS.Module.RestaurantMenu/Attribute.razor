@@ -1,0 +1,104 @@
+﻿@using GIBS.Module.RestaurantMenu.Services
+@using GIBS.Module.RestaurantMenu.Models
+@using Oqtane.Modules.Controls
+
+@namespace GIBS.Module.RestaurantMenu
+@inherits ModuleBase
+@inject IMenuAttributeService MenuAttributeService
+@inject NavigationManager NavigationManager
+@inject IStringLocalizer<Attribute> Localizer
+
+<h3>@Localizer["Title.ManageAttributes"]</h3>
+
+<div><ActionLink Action="AttributeEdit" Security="SecurityAccessLevel.Edit" Class="btn btn-primary" ResourceKey="AddAttributes" Text="@Localizer["AddAttributes"]" /></div>
+
+@if (_menuAttributes == null)
+{
+    <p><em>@Localizer["LoadingAttributes"]</em></p>
+}
+else if (!_menuAttributes.Any())
+{
+    <p>@Localizer["Message.NoAttributes"]</p>
+}
+else
+{
+    <Pager Items="@_menuAttributes">
+        <Header>
+        <th style="width: 1px;">&nbsp;</th> @* For Edit ActionLink *@
+        <th style="width: 1px;">&nbsp;</th> @* For Delete ActionDialog *@
+        <th>@Localizer["Header.AttributeName"]</th>
+        <th>@Localizer["Header.Description"]</th>
+        <th>@Localizer["Header.Icon"]</th>
+        <th>@Localizer["Header.Code"]</th>
+        <th>@Localizer["Header.Color"]</th>
+        <th>@Localizer["Header.SortOrder"]</th>
+        <th>@Localizer["Header.IsActive"]</th>
+        </Header>
+        <Row>
+            <td><ActionLink Action="AttributeEdit" Parameters="@($"id={context.AttributeId}")" Security="SecurityAccessLevel.Edit" ResourceKey="EditButton" Text="@Localizer["EditButton"]" /></td>
+            <td><ActionDialog Header="@Localizer["Dialog.DeleteAttributeHeader"]" Message="@Localizer["Dialog.DeleteAttributeMessage", context.AttributeName]" Action="Delete" Security="SecurityAccessLevel.Edit" Class="btn btn-danger" OnClick="@(async () => await DeleteAttribute(context))" ResourceKey="Delete" Id="@context.AttributeId.ToString()" /></td>
+            <td>@context.AttributeName</td>
+            <td>@context.AttributeDescription</td>
+            <td><span class="@context.AttributeIcon" style="color: @context.AttributeColor;"></span></td>
+            <td>@context.AttributeCode</td>
+            <td>
+                <div style="background-color: @context.AttributeColor; width: 20px; height: 20px; border: 1px solid #ccc;" />
+            </td>
+            <td>@context.SortOrder</td>
+            <td><input type="checkbox" @bind="context.IsActive" disabled /></td>
+        </Row>
+    </Pager>
+}
+<br />
+<div><NavLink class="btn btn-secondary" href="@NavigateUrl()">@Localizer["Link.ReturnToMenus"]</NavLink></div>
+
+@code {
+    List<MenuAttribute> _menuAttributes;
+
+    public override List<Resource> Resources => new List<Resource>()
+    {
+        new Resource { ResourceType = ResourceType.Stylesheet, Url = ModulePath() + "Module.css" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await logger.LogInformation("Attribute.razor: OnInitializedAsync started.");
+        try
+        {
+            await LoadMenuAttributes();
+        }
+        catch (Exception ex)
+        {
+            await logger.LogError(ex, "Error Loading MenuAttributes {Error}", ex.Message);
+            AddModuleMessage(Localizer["Message.LoadError"], MessageType.Error);
+        }
+        await logger.LogInformation("Attribute.razor: OnInitializedAsync finished.");
+    }
+
+    private async Task LoadMenuAttributes()
+    {
+        _menuAttributes = await MenuAttributeService.GetMenuAttributesAsync(ModuleState.ModuleId);
+        if (_menuAttributes == null)
+        {
+            _menuAttributes = new List<MenuAttribute>();
+            await logger.LogWarning("Attribute.razor: Menu attributes list was null after service call for ModuleId: {ModuleId}", ModuleState.ModuleId);
+        }
+    }
+
+    private async Task DeleteAttribute(MenuAttribute menuAttribute)
+    {
+        try
+        {
+            await MenuAttributeService.DeleteMenuAttributeAsync(menuAttribute.AttributeId, ModuleState.ModuleId);
+            await logger.LogInformation("Menu Attribute Deleted: {AttributeName}, ID: {AttributeId}", menuAttribute.AttributeName, menuAttribute.AttributeId);
+            AddModuleMessage(Localizer["Message.AttributeDeletedSuccess", menuAttribute.AttributeName], MessageType.Success);
+            await LoadMenuAttributes();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await logger.LogError(ex, "Error deleting menu attribute {AttributeId}: {ErrorMessage}", menuAttribute.AttributeId, ex.Message);
+            AddModuleMessage(Localizer["Error.DeleteAttributeError", menuAttribute.AttributeName], MessageType.Error);
+        }
+    }
+}

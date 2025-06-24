@@ -1,0 +1,376 @@
+@using GIBS.Module.RestaurantMenu.Services
+@using GIBS.Module.RestaurantMenu.Models
+
+@namespace GIBS.Module.RestaurantMenu
+@inherits ModuleBase
+@inject IRestaurantMenuService RestaurantMenuService
+@inject NavigationManager NavigationManager
+@inject IMenuCategoryService MenuCategoryService
+@inject IMenuItemService MenuItemService
+@inject IStringLocalizer<Index> Localizer
+@inject ISettingService SettingService
+@inject IMenuAttributeService MenuAttributeService
+
+    
+
+
+@if (_RestaurantMenus == null)
+{
+    <p><em>Loading.....</em></p>
+}
+else
+{
+   
+    @if (@_RestaurantMenus.Count != 0)
+    {
+
+        <div class="container">
+            <div class="row">
+                @foreach (var menuItem in _RestaurantMenus.Where(m => m.IsActive)) // Optionally filter for active items
+                {
+                    <div class="col-md-4 mb-3">
+                        @* Adjust col-md-X for number of items per row *@
+                        <div class="card">
+                            @if (!string.IsNullOrEmpty(menuItem.ImageURL))
+                            {
+                                <img src="@menuItem.ImageURL" class="card-img-top" alt="@menuItem.Name">
+                            }
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <button type="button" class="btn btn-lg btn-outline-primary" @onclick="async () => await ShowMenu(menuItem.RestaurantMenuId)">
+                                        @menuItem.Name
+                                    </button>
+                                </h5>
+                                @if (!string.IsNullOrEmpty(menuItem.Description))
+                                {
+                                    <p class="card-text">@menuItem.Description</p>
+                                }
+                                @if (!string.IsNullOrEmpty(menuItem.HoursServed))
+                                {
+                                    <p class="card-text"><small class="text-muted">@Localizer["HoursServed"] @menuItem.HoursServed</small></p>
+                                }
+
+                              @*  @if (_selectedMenuId == menuItem.RestaurantMenuId && _selectedCategories.Any())
+                                {
+                                    <div class="text-center">
+                                       
+                                        
+                                            @foreach (var cat in _selectedCategories)
+                                            {
+                                            <span class="catName">@cat.CategoryName</span>
+                                            @((MarkupString)"&nbsp;&nbsp;&nbsp;")
+                                            }
+                                        
+                                    </div>
+                                } *@
+
+                                @*  <ActionLink Action="Edit" Parameters="@($"id=" + menuItem.RestaurantMenuId.ToString())" Class="btn btn-primary" ResourceKey="Edit" Text="Edit 2" />
+                               You might want a details view or other actions here *@
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <p>@Localizer["Message.DisplayNone"]</p>
+    }
+}
+
+@if (_selectedMenuId != null && _selectedCategories.Any())
+{
+
+    <div class="container mt-4">
+
+        @if (SelectedMenu != null)
+        {
+            <h1 class="text-center">@SelectedMenu.Name</h1>
+        }
+
+        @foreach (var cat in _selectedCategories)
+        {
+            
+            <div class="menu-item-container">
+
+                <h2 class="text-center">@cat.CategoryName</h2>
+                <div class="row">
+                    <div class="col-md-8 offset-md-2 mb-3 text-center"><span class="categoryDescription">@cat.CategoryDescription</span></div>
+                </div>
+                    @foreach (var item in _selectedMenuItems.Where(i => i.CategoryId == cat.CategoryId))
+                    {
+                    <div class="row mb-3">
+                        <div class="col-md-8 offset-md-2">
+                            <div style="display:flex;justify-content:space-between;align-items:baseline;">
+                         <h4 class="itemName">@FormatItemName(item.ItemName, item.IsNewItem)</h4>
+                                <span class="itemPrice">@FormatCurrency(item.ItemPrice)</span>
+                            </div>
+
+                            <div class="itemDescription">@item.ItemDescription</div>
+                            <div>  @GetMenuItemAttributesDisplay(item.MenuItemAttributes) 
+
+                            @if (item.Calories > 0 || item.Protein > 0 || item.Fat > 0 || item.Carbohydrates > 0 || item.Sodium > 0)
+                            {
+                                @GetNutritionInfo(item.Calories, item.Protein, item.Fat, item.Carbohydrates, item.Sodium)
+                            }
+                            </div>
+
+                            @if (item.MenuOptions != null && item.MenuOptions.Any(o => o.IsActive))
+                            {
+                                <div>
+                                    <ul>
+                                        @foreach (var option in item.MenuOptions.Where(o => o.IsActive))
+                                        {
+                                            <li>
+                                                @option.OptionName
+                                                @if (option.OptionPrice > 0)
+                                                {
+                                                    <span> - @option.OptionPrice</span>
+                                                }
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                    }
+                
+            </div>
+        }
+    </div>
+
+    <div class="text-center">@GetAllMenuAttributesDisplay()</div>
+}
+
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2 menuFooter"><span class="menuFooterText">@MenuFooter</span></div>
+    </div>
+</div>
+
+<p class="text-center"><ActionLink Action="Menus" Security="SecurityAccessLevel.Edit" Text="View Menus" ResourceKey="Menus" />
+    <ActionLink Action="Sections" Security="SecurityAccessLevel.Edit" Text="View Sections" ResourceKey="Sections" />
+    <ActionLink Action="Attribute" Security="SecurityAccessLevel.Edit" Text="View Attributes" ResourceKey="Attributes" />
+    <ActionLink Action="MenuItems" Security="SecurityAccessLevel.Edit" Text="Menu Items" ResourceKey="MenuItems" />
+</p>
+
+@code {
+
+
+
+
+
+
+
+
+
+    //public override string RenderMode => RenderModes.Static;  
+    public override string RenderMode => RenderModes.Interactive;  
+
+    private string MenuFooter;
+
+
+    private int? _selectedMenuId = null;
+    private List<MenuCategory> _selectedCategories = new();
+
+    private List<MenuItem> _selectedMenuItems = new();
+
+    private RestaurantMenu SelectedMenu => _RestaurantMenus?.FirstOrDefault(m => m.RestaurantMenuId == _selectedMenuId);
+
+    public override List<Resource> Resources => new List<Resource>()  
+    {  
+        new Resource { ResourceType = ResourceType.Stylesheet, Url = ModulePath() + "Module.css" },  
+        new Resource { ResourceType = ResourceType.Script, Url = ModulePath() + "Module.js" }  
+    };  
+
+    List<RestaurantMenu> _RestaurantMenus;  
+
+    // Add a list to hold all active MenuAttributes
+    private List<MenuAttribute> _allMenuAttributes = new();
+
+    protected override async Task OnInitializedAsync()  
+    {  
+        try  
+        {  
+            //   _defaultMenuId = SettingService.GetSetting(ModuleState.Settings, "DefaultMenuId", 0);
+            var defaultMenuIdString = SettingService.GetSetting(ModuleState.Settings, "DefaultMenuId", "0");
+            int _defaultMenuId = 0;
+            int.TryParse(defaultMenuIdString, out _defaultMenuId);
+
+            if (_defaultMenuId > 0)  
+            {
+                await ShowMenu(_defaultMenuId);  
+            }  
+
+            MenuFooter = SettingService.GetSetting(ModuleState.Settings, "MenuFooter", "");
+            _RestaurantMenus = await RestaurantMenuService.GetRestaurantMenusAsync(ModuleState.ModuleId);  
+
+            // Load all active MenuAttributes for this module
+            _allMenuAttributes = (await MenuAttributeService.GetMenuAttributesAsync(ModuleState.ModuleId))
+                .Where(a => a.IsActive)
+                .OrderBy(a => a.SortOrder)
+                .ToList();
+        }  
+        catch (Exception ex)  
+        {  
+            await logger.LogError(ex, "Error Loading RestaurantMenu {Error}", ex.Message);  
+            AddModuleMessage(Localizer["Message.LoadError"], MessageType.Error);  
+        }  
+    }
+
+    private void TestClick() => Console.WriteLine("Button clicked!");
+
+    private async Task ShowMenu(int restaurantMenuId)
+    {
+        Console.WriteLine($"ShowMenu called for {restaurantMenuId}");
+        _selectedMenuId = restaurantMenuId;
+
+        // _selectedCategories = (await MenuCategoryService.GetMenuCategoriesAsync(ModuleState.ModuleId))
+        //     .Where(c => c.RestaurantMenuId == restaurantMenuId && c.IsActive)
+        //     .OrderBy(c => c.SortOrder)
+        //     .ToList();
+
+        _selectedCategories = (await MenuCategoryService.GetMenuCategoriesWithMenuAsync(ModuleState.ModuleId))
+            .Where(c => c.RestaurantMenuId == restaurantMenuId && c.IsActive)
+            .OrderBy(c => c.SortOrder)
+            .ToList();
+
+        // Use the new method that loads attributes and their MenuAttribute
+        _selectedMenuItems = (await MenuItemService.GetMenuItemsWithAttributesAsync(ModuleState.ModuleId))
+            .Where(i => i.RestaurantMenuId == restaurantMenuId && i.IsActive)
+            .OrderBy(i => i.SortOrder)
+            .ToList();
+
+        StateHasChanged(); // Ensure UI updates
+    }
+
+
+
+    public MarkupString FormatItemName(string itemName, bool isNewItem)
+    {
+        string newItemPrefix = Localizer["NewItem.Text"];
+        if (string.IsNullOrEmpty(newItemPrefix) || newItemPrefix == "NewItem.Text")
+        {
+            newItemPrefix = "<span class='newitemtext'>New!</span>"; // Fallback if resource string is missing
+        }
+
+        if (isNewItem)
+        {
+            return new MarkupString($"{newItemPrefix} {itemName}");
+        }
+        return new MarkupString(itemName);
+    }
+
+
+  
+
+private string FormatCurrency(decimal price)
+{
+    try
+    {
+        if (price == 0)
+        {
+            return Localizer["ZeroPrice.Text"];
+        }
+
+        var cultureInfo = new System.Globalization.CultureInfo("en-US"); // Example: US Dollar
+
+        // Show no decimals if price is a whole number, otherwise show two decimals
+        if (price == Math.Floor(price))
+        {
+            return price.ToString("C0", cultureInfo); // No decimals
+        }
+        else
+        {
+            return price.ToString("C2", cultureInfo); // Two decimals
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Could not format currency using CurrentUICulture.");
+        return price.ToString("C");
+    }
+}
+
+    public MarkupString GetNutritionInfo(decimal calories, decimal protein, decimal fat, decimal carbs, decimal sodium)
+    {
+        var parts = new List<string>();
+
+        if (calories > 0)
+            parts.Add($"<span style='white-space: nowrap;'>Calories: {Math.Round(calories, 0)}</span>");
+        if (protein > 0)
+            parts.Add($"<span style='white-space: nowrap;'>Protein: {Math.Round(protein, 0)}g</span>");
+        if (fat > 0)
+            parts.Add($"<span style='white-space: nowrap;'>Fat: {Math.Round(fat, 0)}g</span>");
+        if (carbs > 0)
+            parts.Add($"<span style='white-space: nowrap;'>Carbs: {Math.Round(carbs, 0)}g</span>");
+        if (sodium > 0)
+            parts.Add($"<span style='white-space: nowrap;'>Sodium: {Math.Round(sodium, 0)}mg</span>");
+
+        if (parts.Count > 0)
+            return new MarkupString($"<span class='text-muted' style='margin-bottom:10px;'>{string.Join(" &nbsp;|&nbsp; ", parts)}</span>");
+        return new MarkupString(string.Empty);
+    }
+
+
+    public MarkupString GetMenuItemAttributesDisplay(IEnumerable<MenuItemAttribute> attributes)
+    {
+        if (attributes == null || !attributes.Any())
+        {
+            return new MarkupString(string.Empty);
+        }
+
+        var sb = new System.Text.StringBuilder("<span class=\"menu-item-attributes\">");
+        foreach (var attr in attributes.Where(a => a.MenuAttribute != null && a.MenuAttribute.IsActive))
+        {
+            string iconStyle = $"display: inline-block; background-color: {attr.MenuAttribute.AttributeColor ?? "#ccc"}; color: white; padding: 2px 5px; margin-right: 5px; border-radius: 3px; font-size: 0.8em;";
+            sb.AppendFormat("<span style='{0}' title='{1}'>{2}</span> ",
+                            iconStyle,
+                            attr.MenuAttribute.AttributeDescription,
+                            attr.MenuAttribute.AttributeCode);
+        }
+        sb.Append("</span>");
+        return new MarkupString(sb.ToString());
+    }
+
+    // New helper to display all attributes with icon and description
+    public MarkupString GetAllMenuAttributesDisplay()
+    {
+        if (_allMenuAttributes == null || !_allMenuAttributes.Any())
+            return new MarkupString(string.Empty);
+
+        var sb = new System.Text.StringBuilder("<span class=\"menu-item-attributes\">");
+        foreach (var attr in _allMenuAttributes)
+        {
+            string iconStyle = $"display: inline-block; background-color: {attr.AttributeColor ?? "#ccc"}; color: white; padding: 2px 5px; margin-right: 5px; border-radius: 3px; font-size: 0.8em;";
+            sb.AppendFormat(
+                "<span style='white-space: nowrap; margin=bottom: 10px;'><span style='{0}' title='{1}'>{2}</span> <span class='attribute-description' style='margin-right:12px;color:#555;font-size:0.9em;'>{3}</span></span>",
+                iconStyle,
+                attr.AttributeDescription,
+                attr.AttributeCode,
+                attr.AttributeDescription
+            );
+        }
+        sb.Append("</span>");
+        return new MarkupString(sb.ToString());
+    }
+
+    private async Task Delete(RestaurantMenu RestaurantMenu)  
+    {  
+        try  
+        {  
+            await RestaurantMenuService.DeleteRestaurantMenuAsync(RestaurantMenu.RestaurantMenuId, ModuleState.ModuleId);  
+            await logger.LogInformation("RestaurantMenu Deleted {RestaurantMenu}", RestaurantMenu);  
+            _RestaurantMenus = await RestaurantMenuService.GetRestaurantMenusAsync(ModuleState.ModuleId);  
+            StateHasChanged();  
+        }  
+        catch (Exception ex)  
+        {  
+            await logger.LogError(ex, "Error Deleting RestaurantMenu {RestaurantMenu} {Error}", RestaurantMenu, ex.Message);  
+            AddModuleMessage(Localizer["Message.DeleteError"], MessageType.Error);  
+        }  
+    }  
+}

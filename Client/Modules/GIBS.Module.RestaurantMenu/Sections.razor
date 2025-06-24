@@ -1,0 +1,126 @@
+﻿@using GIBS.Module.RestaurantMenu.Services
+@using GIBS.Module.RestaurantMenu.Models
+@using Oqtane.Modules.Controls
+
+@namespace GIBS.Module.RestaurantMenu
+@inherits ModuleBase
+@inject IRestaurantMenuService RestaurantMenuService
+@inject IMenuCategoryService MenuCategoryService
+@inject NavigationManager NavigationManager
+@inject IStringLocalizer<Sections> Localizer
+
+<h3>@Localizer["Title.ManageMenuSections"]</h3>
+
+<div><ActionLink Action="SectionsEdit" Security="SecurityAccessLevel.Edit" Class="btn btn-primary" ResourceKey="AddSections" Text="@Localizer["AddSections"]" /></div>
+
+@if (_menuCategories == null)
+{
+    <p><em>@Localizer["LoadingCategories"]</em></p>
+}
+else if (!_menuCategories.Any())
+{
+    <p>@Localizer["Message.NoCategories"]</p>
+}
+else
+{
+   
+<br />
+ <Pager Items="@_menuCategories">
+    <Header>
+            <th style="width: 1px;">&nbsp;</th>
+            <th style="width: 1px;">&nbsp;</th>
+            <th>@Localizer["Header.Menu"]</th>
+            <th>@Localizer["Header.CategoryName"]</th>
+            <th>@Localizer["Header.Description"]</th>
+            <th>@Localizer["Header.SortOrder"]</th>
+            <th>@Localizer["Header.IsActive"]</th>   
+    </Header>
+    <Row>
+        <td>
+            <ActionLink
+                Action="SectionsEdit"
+                Parameters="@("id=" + context.CategoryId)"
+                Security="SecurityAccessLevel.Edit"
+                ResourceKey="EditButton"
+                Text="@Localizer["EditButton"]" />
+        </td>
+        <td>
+            <ActionDialog
+                Header="@Localizer["Dialog.DeleteCategoryHeader"]"
+                Message="@Localizer["Dialog.DeleteCategoryMessage", context.CategoryName]"
+                Action="Delete"
+                Security="SecurityAccessLevel.Edit"
+                Class="btn btn-danger"
+                OnClick="@(() => DeleteCategory(context))"
+                ResourceKey="Delete"
+                Id="@context.CategoryId.ToString()" />
+        </td>
+        <td>@(GetMenuName(context.RestaurantMenuId))</td>
+        <td>@context.CategoryName</td>
+        <td>@context.CategoryDescription</td>
+        <td>@context.SortOrder</td>
+        <td><input type="checkbox" @bind="context.IsActive" disabled /></td>
+    </Row>
+</Pager>
+}
+
+<br />
+<div><NavLink class="btn btn-secondary" href="@NavigateUrl()">@Localizer["Link.ReturnToMenus"]</NavLink></div>
+
+@code {
+    List<MenuCategory> _menuCategories;
+    List<RestaurantMenu> _restaurantMenus;
+
+    public override List<Resource> Resources => new List<Resource>()
+    {
+        new Resource { ResourceType = ResourceType.Stylesheet, Url = ModulePath() + "Module.css" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+      //  await logger.LogInformation("Sections.razor: OnInitializedAsync started.");
+        try
+        {
+            _restaurantMenus = await RestaurantMenuService.GetRestaurantMenusAsync(ModuleState.ModuleId);
+            await LoadMenuCategories();
+        }
+        catch (Exception ex)
+        {
+            await logger.LogError(ex, "Error Loading Data {{Error}}", ex.Message);
+            AddModuleMessage(Localizer["Message.LoadError"], MessageType.Error);
+        }
+     //   await logger.LogInformation("Sections.razor: OnInitializedAsync finished.");
+    }
+
+    private async Task LoadMenuCategories()
+    {
+        _menuCategories = await MenuCategoryService.GetMenuCategoriesAsync(ModuleState.ModuleId);
+        if (_menuCategories == null)
+        {
+            _menuCategories = new List<MenuCategory>();
+            await logger.LogWarning("Sections.razor: Menu categories list was null after service call for ModuleId: {{ModuleId}}", ModuleState.ModuleId);
+        }
+    }
+
+    private string GetMenuName(int restaurantMenuId)
+    {
+        return _restaurantMenus?.FirstOrDefault(m => m.RestaurantMenuId == restaurantMenuId)?.Name ?? string.Empty;
+    }
+
+    private async Task DeleteCategory(MenuCategory menuCategory)
+    {
+        try
+        {
+            await MenuCategoryService.DeleteMenuCategoryAsync(menuCategory.CategoryId, ModuleState.ModuleId);
+            await logger.LogInformation("Menu Category Deleted: {{CategoryName}}, ID: {{CategoryId}}", menuCategory.CategoryName, menuCategory.CategoryId);
+            AddModuleMessage(Localizer["Message.CategoryDeletedSuccess", menuCategory.CategoryName], MessageType.Success);
+            await LoadMenuCategories();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await logger.LogError(ex, "Error deleting menu category {{CategoryId}}: {{ErrorMessage}}", menuCategory.CategoryId, ex.Message);
+            AddModuleMessage(Localizer["Error.DeleteCategoryError", menuCategory.CategoryName], MessageType.Error);
+        }
+    }
+}

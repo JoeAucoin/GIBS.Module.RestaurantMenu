@@ -1,0 +1,130 @@
+/* Module Custom Styles */
+
+.card-title {
+    text-align: center;
+    font-size: 1.5rem;
+    color: #333;
+}
+
+.card-text {
+    text-align: center;
+    font-size: 1.2rem;
+    color: #555;
+}
+
+.categoryDescription {
+    text-align: center;
+    font-size: 1.1rem;
+    color: #666;
+   
+}
+
+.itemDescription {
+    color:blue;
+}
+
+.menuFooter {
+    text-align: center;
+    font-size: 1rem;
+    color: #777;
+    margin-top: 30px;
+    margin-bottom: 30px;
+    padding-left: 30px;
+    padding-right: 30px;
+}
+
+.newitemtext {
+    color: red;
+    margin-right: 10px;
+    text-transform: none;
+    text-shadow: 2px 2px 0px rgba(0,0,0,0.2);
+}
+
+.menu-item-container hr {
+    height: 1px;
+    color: #ed1d61;
+    background: lightslategray;
+    font-size: 0;
+    border: 0;
+}
+
+.menu-types-container {
+    width: 100%;
+    text-align: center;
+}
+
+.menu-category-container {
+    width: 100%;
+    text-align: center;
+}
+
+.managementLinks {
+    width: 100%;
+    text-align: center;
+}
+
+    .managementLinks h5 {
+        width: 100%;
+        text-align: center;
+        font-size: small;
+    }
+
+.itemName {
+    font-size: 1.5em;
+    text-transform: uppercase;
+    margin-bottom: 0;
+}
+
+.itemPrice {
+    font-size: 1.3em;
+}
+
+.menu-item-options {
+    margin-left: 50px;
+}
+
+.menu-option-nutrition {
+}
+
+.menuFooter {
+    text-align: center;
+}
+
+.text-muted {
+    font-size: 0.9em !important;
+    margin-left: 20px;
+}
+
+.mb-3 {
+    margin-bottom: 25px;
+}
+
+.catbutton, .catbutton:link, .catbutton:visited, .catbutton:hover, .catbutton:active {
+    display: inline-block; /* Allow buttons to wrap and respect margins */
+    color: white;
+    background: lightslategray;
+    padding: 8px 12px; /* Consistent padding */
+    border-radius: 5px;
+    text-decoration: none;
+    margin: 5px; /* Add spacing around buttons */
+    vertical-align: top; /* Align buttons nicely if they have different text lengths */
+}
+
+/* Media query should be at the top level, not nested in .catbutton rule */
+@media (max-width: 480px) {
+    .menu-item-container [style*="display:flex"] {
+        display: block !important;
+    }
+
+    .itemPrice {
+        float: right;
+        margin-top: -1.5em;
+    }
+    /* Optional: If buttons still crowd, make them stack on very small screens */
+    .catbutton, .catbutton:link, .catbutton:visited, .catbutton:hover, .catbutton:active {
+        /* display: block; */ /* Uncomment to stack */
+        /* width: 90%; */ /* Adjust width as needed if stacking */
+        /* margin-left: auto; */
+        /* margin-right: auto; */
+    }
+}

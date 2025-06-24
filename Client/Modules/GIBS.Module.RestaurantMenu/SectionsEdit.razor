@@ -1,0 +1,233 @@
+﻿@using GIBS.Module.RestaurantMenu.Services
+@using GIBS.Module.RestaurantMenu.Models
+@using Oqtane.Modules.Controls 
+@using Oqtane.UI; 
+@using Oqtane.Shared;
+@using Oqtane.Enums;
+@using System.ComponentModel.DataAnnotations 
+@using System.Linq
+@using Microsoft.AspNetCore.Components.Authorization
+
+@inject Microsoft.JSInterop.IJSRuntime JSRuntime // Required for Interop
+
+@namespace GIBS.Module.RestaurantMenu
+@inherits ModuleBase
+@inject IMenuCategoryService MenuCategoryService
+@inject IRestaurantMenuService RestaurantMenuService
+@inject NavigationManager NavigationManager
+@inject IStringLocalizer<SectionsEdit> Localizer
+
+@if (_initialized == true)
+{
+    <form @ref="_form" class="@(_validated ? "was-validated" : "needs-validation")" novalidate>
+        <div class="container">
+
+            <div class="row mb-1 align-items-center">
+                <Label Class="col-sm-3" For="restaurantMenuId" HelpText="Select the parent menu for this section." ResourceKey="ParentMenu" />
+                <div class="col-sm-9">
+
+                    <select id="restaurantMenuId" class="form-control" @bind="_menuCategory.RestaurantMenuId" required>
+                        <option value="">@Localizer["Select.Menu"]</option>
+                        @foreach (var menu in _restaurantMenus)
+                        {
+                            <option value="@menu.RestaurantMenuId">@menu.Name</option>
+                        }
+                    </select>
+                    <div class="invalid-feedback">@Localizer["Validation.RestaurantMenuId.Required.Text"]</div>
+                </div>
+            </div>
+            <div class="row mb-1 align-items-center">
+                <Label Class="col-sm-3" For="categoryName" HelpText="Enter the name for the menu section." ResourceKey="Label.CategoryName">Section: </Label>
+                <div class="col-sm-9">
+                    <input id="categoryName" class="form-control" @bind="@_menuCategory.CategoryName" required />
+                    <div class="invalid-feedback">@Localizer["Validation.CategoryName.Required.Text"]</div>
+                </div>
+            </div>
+
+            <div class="row mb-1 align-items-center">
+                <Label Class="col-sm-3" For="categoryDescription" HelpText="Enter a description for the menu section." ResourceKey="Label.CategoryDescription">Description: </Label>
+                <div class="col-sm-9">
+                    <textarea id="categoryDescription" class="form-control" @bind="@_menuCategory.CategoryDescription"></textarea>
+                </div>
+            </div>
+
+            <div class="row mb-1 align-items-center">
+                <Label Class="col-sm-3" For="categoryIcon" HelpText="Enter an icon class or URL (optional)." ResourceKey="Label.CategoryIcon">Icon: </Label>
+                <div class="col-sm-9">
+                    <input id="categoryIcon" class="form-control" @bind="@_menuCategory.CategoryIcon" />
+                </div>
+            </div>
+
+            <div class="row mb-1 align-items-center">
+                <Label Class="col-sm-3" For="sortOrder" HelpText="Enter the display order for this section." ResourceKey="SortOrder">Sort Order: </Label>
+                <div class="col-sm-9">
+                    <input id="sortOrder" type="number" class="form-control" @bind="@_menuCategory.SortOrder" required />
+                    <div class="invalid-feedback">@Localizer["Validation.SortOrder.Required"]</div>
+                </div>
+            </div>
+
+            
+
+            <div class="row mb-1 align-items-center">
+                <Label Class="col-sm-3" For="isActive" HelpText="Check if this menu section is active." ResourceKey="Label.IsActive">Is Active: </Label>
+                <div class="col-sm-9">
+                    <input id="isActive" type="checkbox" class="form-check-input" @bind="@_menuCategory.IsActive" />
+                </div>
+            </div>
+        </div>
+        <br />
+        <button type="button" class="btn btn-success" @onclick="SaveSection">@Localizer["Save.Text"]</button>
+        <NavLink class="btn btn-secondary" href="@ReturnUrl()">@Localizer["Cancel.Text"]</NavLink>
+
+        @if (_isEditMode && _menuCategory != null && _menuCategory.CategoryId != 0)
+        {
+            <hr />
+            <AuditInfo CreatedBy="@_menuCategory.CreatedBy" CreatedOn="@_menuCategory.CreatedOn" ModifiedBy="@_menuCategory.ModifiedBy" ModifiedOn="@_menuCategory.ModifiedOn"></AuditInfo>
+        }
+    </form>
+}
+else
+{
+    <p><em>@Localizer["Loading.Text"]</em></p>
+}
+
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState> authenticationStateTask { get; set; }
+
+    public override string RenderMode => RenderModes.Interactive;
+
+    public override SecurityAccessLevel SecurityAccessLevel => SecurityAccessLevel.Edit;
+    public override string Actions => "SectionsEdit";
+    public override string Title => _isEditMode ? (Localizer?["PageTitle.EditSection"] ?? "Edit Section") : (Localizer?["PageTitle.AddSection"] ?? "Add Section");
+
+    public override List<Resource> Resources => new List<Resource>()
+    {
+        new Resource { ResourceType = ResourceType.Stylesheet, Url = ModulePath() + "Module.css" },
+        new Resource { ResourceType = ResourceType.Script, Url = ModulePath() + "Module.js" }
+    };
+
+    private MenuCategory _menuCategory = new MenuCategory();
+    private ElementReference _form;
+    private bool _validated = false;
+    private bool _isEditMode = false;
+    private bool _initialized = false;
+    private string CurrentUserName;
+    private List<RestaurantMenu> _restaurantMenus = new();
+    
+
+    protected override async Task OnInitializedAsync()
+    {
+      //  _users = users;
+
+        var authState = await authenticationStateTask;
+        var user = authState.User;
+
+        _restaurantMenus = await RestaurantMenuService.GetRestaurantMenusAsync(ModuleState.ModuleId) ?? new List<RestaurantMenu>();
+
+        if (user.Identity.IsAuthenticated)
+        {
+            CurrentUserName = user.Identity.Name;
+        }
+        else
+        {
+            CurrentUserName = "Anonymous"; // Or handle as needed for unauthenticated users
+        }
+        
+      
+        try
+        {
+            if (PageState.QueryString != null && PageState.QueryString.ContainsKey("id") && int.TryParse(PageState.QueryString["id"], out int categoryId))
+            {
+                _isEditMode = true;
+            
+                if (MenuCategoryService != null)
+                {
+                    _menuCategory = await MenuCategoryService.GetMenuCategoryAsync(categoryId, ModuleState.ModuleId);
+                    if (_menuCategory == null)
+                    {
+                    
+                        AddModuleMessage(Localizer["Error.LoadCategory.NotFound", categoryId.ToString()] ?? $"Category {categoryId} not found.", MessageType.Error);
+                        NavigationManager.NavigateTo(NavigateUrl("Sections"));
+                        return;
+                    }
+                  
+                }
+                else
+                {
+                  
+                    _menuCategory = new MenuCategory { CategoryName = "Error: Service unavailable" }; // Fallback
+                }
+            }
+            else
+            {
+                _isEditMode = false;
+          
+                _menuCategory = new MenuCategory
+                {
+                    IsActive = true, // Default value for new category
+                    ModuleId = ModuleState?.ModuleId ?? 0
+                };
+            }
+            _initialized = true;
+         
+        }
+        catch (Exception ex)
+        {
+           // Console.WriteLine($"SectionsEdit.razor: ERROR in OnInitializedAsync - {ex.ToString()}");
+            AddModuleMessage(Localizer["Error.PageLoad"] + $": {ex.Message}" ?? $"Page Load Error: {ex.Message}", MessageType.Error);
+            _initialized = true; // Still set to true to allow rendering of error messages or a partial form
+        }
+     //   Console.WriteLine("SectionsEdit.razor (Full Form Test): OnInitializedAsync END");
+    }
+
+
+
+
+    private string ReturnUrl()
+    {
+        if (ModuleState != null)
+        {
+            return (!string.IsNullOrEmpty(NavigateUrl() + "/*/" + ModuleState.ModuleId + "/Sections")) ? NavigateUrl() + "/*/" + ModuleState.ModuleId + "/Sections" : NavigateUrl();
+        }
+        return NavigateUrl();
+    }
+
+    private async Task SaveSection()
+    {
+        _validated = true;
+        var formIsValid = await JSRuntime.InvokeAsync<bool>("interopFormValid", _form);
+
+        if (!formIsValid)
+        {
+            AddModuleMessage(Localizer["Error.Validation"]?.Value ?? "Please check the form for validation errors.", MessageType.Warning);
+            return;
+        }
+
+        try
+        {
+
+            if (_isEditMode)
+            {
+                _menuCategory.ModifiedBy = CurrentUserName; // Added null conditional for safety
+                await MenuCategoryService.UpdateMenuCategoryAsync(_menuCategory);
+                AddModuleMessage(Localizer["Success.Update"]?.Value ?? "Category updated successfully.", MessageType.Success);
+            }
+            else
+            {
+                _menuCategory.CreatedBy = CurrentUserName; // Added null conditional for safety
+                _menuCategory.ModuleId = ModuleState.ModuleId;
+                var newCategory = await MenuCategoryService.AddMenuCategoryAsync(_menuCategory);
+                AddModuleMessage(Localizer["Success.Add"]?.Value ?? "Category added successfully.", MessageType.Success);
+            }
+            NavigationManager.NavigateTo(ReturnUrl());
+        }
+        catch (Exception ex)
+        {
+            AddModuleMessage(Localizer["Error.Save"] + $": {ex.Message}" ?? $"Save Error: {ex.Message}", MessageType.Error);
+        }
+    }
+
+
+}

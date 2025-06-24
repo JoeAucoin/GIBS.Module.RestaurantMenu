@@ -1,0 +1,88 @@
+@using GIBS.Module.RestaurantMenu.Models
+@using GIBS.Module.RestaurantMenu.Services
+
+@namespace GIBS.Module.RestaurantMenu
+@inherits ModuleBase
+@inject ISettingService SettingService
+@inject IStringLocalizer<Settings> Localizer
+@inject IRestaurantMenuService RestaurantMenuService
+
+<div class="container">
+    <div class="row mb-1 align-items-center">
+        <Label Class="col-sm-3" For="value" HelpText="Enter a value" ResourceKey="SettingName" ResourceType="@resourceType">Name: </Label>
+            <div class="col-sm-9">
+                <input id="value" type="text" class="form-control" @bind="@_value" />
+            </div>
+    </div>
+
+    <div class="row mb-1 align-items-center">
+        <Label Class="col-sm-3" For="menuFooter" ResourceKey="MenuFooter" ResourceType="@resourceType">Name: </Label>
+        <div class="col-sm-9">
+            <textarea id="menuFooter" class="form-control" @bind="@_menuFooter" />
+        </div>
+    </div>
+
+    <div class="row mb-1 align-items-center">
+        <Label Class="col-sm-3" For="defaultMenu" ResourceKey="DefaultMenu" ResourceType="@resourceType">Name: </Label>
+        <div class="col-sm-9">
+            <select id="defaultMenu" class="form-select" @bind="_selectedRestaurantMenuId">
+                <option value="">@Localizer["Select.Menu"]</option>
+                @foreach (var menu in _restaurantMenus)
+                {
+                    <option value="@menu.RestaurantMenuId">@menu.Name</option>
+                }
+            </select>
+        </div>
+    </div>
+
+</div>
+
+@code {
+    private string resourceType = "GIBS.Module.RestaurantMenu.Settings, GIBS.Module.RestaurantMenu.Client.Oqtane"; // for localization
+    public override string Title => "RestaurantMenu Settings";
+    private List<RestaurantMenu> _restaurantMenus = new();
+    private int? _selectedRestaurantMenuId;
+
+    string _value;
+    string _menuFooter;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Dictionary<string, string> settings = await SettingService.GetModuleSettingsAsync(ModuleState.ModuleId);
+            _value = SettingService.GetSetting(settings, "SettingName", "");
+            _menuFooter = SettingService.GetSetting(settings, "MenuFooter", "");
+
+            // Load restaurant menus
+            _restaurantMenus = await RestaurantMenuService.GetRestaurantMenusAsync(ModuleState.ModuleId);
+
+            // Optionally load the saved default menu id
+            var menuIdString = SettingService.GetSetting(settings, "DefaultMenuId", "");
+            if (int.TryParse(menuIdString, out var menuId))
+            {
+                _selectedRestaurantMenuId = menuId;
+            }
+        }
+        catch (Exception ex)
+        {
+            AddModuleMessage(ex.Message, MessageType.Error);
+        }
+    }
+
+    public async Task UpdateSettings()
+    {
+        try
+        {
+            Dictionary<string, string> settings = await SettingService.GetModuleSettingsAsync(ModuleState.ModuleId);
+            SettingService.SetSetting(settings, "SettingName", _value);
+            SettingService.SetSetting(settings, "MenuFooter", _menuFooter);
+            SettingService.SetSetting(settings, "DefaultMenuId", _selectedRestaurantMenuId?.ToString() ?? "");
+            await SettingService.UpdateModuleSettingsAsync(settings, ModuleState.ModuleId);
+        }
+        catch (Exception ex)
+        {
+            AddModuleMessage(ex.Message, MessageType.Error);
+        }
+    }
+}
