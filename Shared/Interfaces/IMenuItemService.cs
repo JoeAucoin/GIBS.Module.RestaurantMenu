@@ -25,16 +25,6 @@ namespace GIBS.Module.RestaurantMenu.Services
 
         Task<int> GetMaxSortOrderByCategoryAsync(int categoryId, int moduleId);
 
-        //Task<List<Models.MenuItem>> GetMenuItemsAsync(int moduleId);
-        //Task<Models.MenuItem> GetMenuItemAsync(int menuItemId, int moduleId);
-        //Task<Models.MenuItem> AddMenuItemAsync(Models.MenuItem menuItem);
-        //Task<Models.MenuItem> UpdateMenuItemAsync(Models.MenuItem menuItem);
-        //Task DeleteMenuItemAsync(int menuItemId, int moduleId);
-
-        //Task UpdateMenuItemAttributesAsync(int menuItemId, List<int> attributeIds);
-
-
-        //// Add this new method for getting items by category
-        //Task<List<MenuItem>> GetMenuItemsByCategoryAsync(int categoryId, int moduleId);
+    
     }
 }

@@ -14,7 +14,7 @@ namespace GIBS.Module.RestaurantMenu.Startup
             // Fix for CS0311: Ensure MenuCategoryService implements IMenuCategoryService
             services.AddScoped<IMenuCategoryService, MenuCategoryService>();
 
-            services.AddScoped<IMenuOptionService, MenuOptionService>();
+            services.AddScoped<IMenuOptionService, Client.Services.MenuOptionService>();
 
         }
     }
