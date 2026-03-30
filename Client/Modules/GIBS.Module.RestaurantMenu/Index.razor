@@ -12,8 +12,7 @@
 @inject IMenuAttributeService MenuAttributeService
 
     
-
-
+    
 @if (_RestaurantMenus == null)
 {
     <p><em>Loading.....</em></p>
@@ -37,9 +36,9 @@ else
                             }
                             <div class="card-body">
                                 <h5 class="card-title">
-                                    <button type="button" class="btn btn-lg btn-outline-primary" @onclick="async () => await ShowMenu(menuItem.RestaurantMenuId)">
+                                    <a href="@NavigationManager.GetUriWithQueryParameter("menuId", menuItem.RestaurantMenuId)" class="btn btn-lg btn-outline-primary">
                                         @menuItem.Name
-                                    </button>
+                                    </a>
                                 </h5>
                                 @if (!string.IsNullOrEmpty(menuItem.Description))
                                 {
@@ -53,7 +52,6 @@ else
                               @*  @if (_selectedMenuId == menuItem.RestaurantMenuId && _selectedCategories.Any())
                                 {
                                     <div class="text-center">
-                                       
                                         
                                             @foreach (var cat in _selectedCategories)
                                             {
@@ -165,23 +163,12 @@ else
 
 @code {
 
-
-
-
-
-
-
-
-
-    //public override string RenderMode => RenderModes.Static;  
-    public override string RenderMode => RenderModes.Interactive;  
+    public override string RenderMode => RenderModes.Static;
 
     private string MenuFooter;
 
-
     private int? _selectedMenuId = null;
     private List<MenuCategory> _selectedCategories = new();
-
     private List<MenuItem> _selectedMenuItems = new();
 
     private RestaurantMenu SelectedMenu => _RestaurantMenus?.FirstOrDefault(m => m.RestaurantMenuId == _selectedMenuId);
@@ -194,31 +181,35 @@ else
 
     List<RestaurantMenu> _RestaurantMenus;  
 
-    // Add a list to hold all active MenuAttributes
     private List<MenuAttribute> _allMenuAttributes = new();
 
     protected override async Task OnInitializedAsync()  
     {  
         try  
         {  
-            //   _defaultMenuId = SettingService.GetSetting(ModuleState.Settings, "DefaultMenuId", 0);
             var defaultMenuIdString = SettingService.GetSetting(ModuleState.Settings, "DefaultMenuId", "0");
-            int _defaultMenuId = 0;
-            int.TryParse(defaultMenuIdString, out _defaultMenuId);
+            int.TryParse(defaultMenuIdString, out int _defaultMenuId);
 
-            if (_defaultMenuId > 0)  
+            var menuId = GetMenuIdFromUrl() ?? (_defaultMenuId > 0 ? _defaultMenuId : (int?)null);
+
+            if (menuId.HasValue)  
             {
-                await ShowMenu(_defaultMenuId);  
+                await ShowMenu(menuId.Value);  
             }  
 
             MenuFooter = SettingService.GetSetting(ModuleState.Settings, "MenuFooter", "");
             _RestaurantMenus = await RestaurantMenuService.GetRestaurantMenusAsync(ModuleState.ModuleId);  
 
-            // Load all active MenuAttributes for this module
             _allMenuAttributes = (await MenuAttributeService.GetMenuAttributesAsync(ModuleState.ModuleId))
                 .Where(a => a.IsActive)
                 .OrderBy(a => a.SortOrder)
                 .ToList();
+
+            var menuName = _selectedMenuItems.FirstOrDefault()?.RestaurantMenu?.Name;
+            if (!string.IsNullOrEmpty(menuName))
+            {
+                SetPageTitle(menuName + " Menu");
+            }
         }  
         catch (Exception ex)  
         {  
@@ -227,40 +218,40 @@ else
         }  
     }
 
-    private void TestClick() => Console.WriteLine("Button clicked!");
+    private int? GetMenuIdFromUrl()
+    {
+        var uri = new Uri(NavigationManager.Uri);
+        foreach (var part in uri.Query.TrimStart('?').Split('&'))
+        {
+            var kv = part.Split('=');
+            if (kv.Length == 2 && kv[0].Equals("menuId", StringComparison.OrdinalIgnoreCase)
+                && int.TryParse(Uri.UnescapeDataString(kv[1]), out var id))
+                return id;
+        }
+        return null;
+    }
 
     private async Task ShowMenu(int restaurantMenuId)
     {
-        Console.WriteLine($"ShowMenu called for {restaurantMenuId}");
         _selectedMenuId = restaurantMenuId;
-
-        // _selectedCategories = (await MenuCategoryService.GetMenuCategoriesAsync(ModuleState.ModuleId))
-        //     .Where(c => c.RestaurantMenuId == restaurantMenuId && c.IsActive)
-        //     .OrderBy(c => c.SortOrder)
-        //     .ToList();
 
         _selectedCategories = (await MenuCategoryService.GetMenuCategoriesWithMenuAsync(ModuleState.ModuleId))
             .Where(c => c.RestaurantMenuId == restaurantMenuId && c.IsActive)
             .OrderBy(c => c.SortOrder)
             .ToList();
 
-        // Use the new method that loads attributes and their MenuAttribute
         _selectedMenuItems = (await MenuItemService.GetMenuItemsWithAttributesAsync(ModuleState.ModuleId))
             .Where(i => i.RestaurantMenuId == restaurantMenuId && i.IsActive)
             .OrderBy(i => i.SortOrder)
             .ToList();
-
-        StateHasChanged(); // Ensure UI updates
     }
-
-
-
+    
     public MarkupString FormatItemName(string itemName, bool isNewItem)
     {
         string newItemPrefix = Localizer["NewItem.Text"];
         if (string.IsNullOrEmpty(newItemPrefix) || newItemPrefix == "NewItem.Text")
         {
-            newItemPrefix = "<span class='newitemtext'>New!</span>"; // Fallback if resource string is missing
+            newItemPrefix = "<span class='newitemtext'>New!</span>";
         }
 
         if (isNewItem)
@@ -269,9 +260,6 @@ else
         }
         return new MarkupString(itemName);
     }
-
-
-  
 
 private string FormatCurrency(decimal price)
 {
@@ -371,7 +359,6 @@ private string FormatCurrency(decimal price)
             await RestaurantMenuService.DeleteRestaurantMenuAsync(RestaurantMenu.RestaurantMenuId, ModuleState.ModuleId);  
             await logger.LogInformation("RestaurantMenu Deleted {RestaurantMenu}", RestaurantMenu);  
             _RestaurantMenus = await RestaurantMenuService.GetRestaurantMenusAsync(ModuleState.ModuleId);  
-            StateHasChanged();  
         }  
         catch (Exception ex)  
         {  
@@ -385,3 +372,4 @@ private string FormatCurrency(decimal price)
         return NavigateUrl(); // Returns the current URL
     }
 }
+}}

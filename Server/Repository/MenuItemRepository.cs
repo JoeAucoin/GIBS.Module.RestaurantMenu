@@ -107,6 +107,7 @@ namespace GIBS.Module.RestaurantMenu.Repository
         {
             using var db = _factory.CreateDbContext();
             return await db.MenuItem
+                .Include(m => m.RestaurantMenu)
                 .Include(m => m.MenuItemAttributes)
                     .ThenInclude(a => a.MenuAttribute)
                 .Include(m => m.MenuOptions)
