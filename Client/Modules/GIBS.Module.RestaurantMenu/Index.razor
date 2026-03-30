@@ -205,10 +205,10 @@ else
                 .OrderBy(a => a.SortOrder)
                 .ToList();
 
-            var menuName = _selectedMenuItems.FirstOrDefault()?.RestaurantMenu?.Name;
+            var menuName = _selectedMenuItems.FirstOrDefault()?.RestaurantMenu?.Description;
             if (!string.IsNullOrEmpty(menuName))
             {
-                SetPageTitle(menuName + " Menu");
+                SetPageTitle(menuName);
             }
         }  
         catch (Exception ex)  
