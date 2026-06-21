@@ -261,33 +261,33 @@ else
         return new MarkupString(itemName);
     }
 
-private string FormatCurrency(decimal price)
-{
-    try
+    private string FormatCurrency(decimal price)
     {
-        if (price == 0)
+        try
         {
-            return Localizer["ZeroPrice.Text"];
-        }
+            if (price == 0)
+            {
+                return Localizer["ZeroPrice.Text"];
+            }
 
-        var cultureInfo = new System.Globalization.CultureInfo("en-US"); // Example: US Dollar
+            var cultureInfo = new System.Globalization.CultureInfo("en-US"); // Example: US Dollar
 
-        // Show no decimals if price is a whole number, otherwise show two decimals
-        if (price == Math.Floor(price))
-        {
-            return price.ToString("C0", cultureInfo); // No decimals
+            // Show no decimals if price is a whole number, otherwise show two decimals
+            if (price == Math.Floor(price))
+            {
+                return price.ToString("C0", cultureInfo); // No decimals
+            }
+            else
+            {
+                return price.ToString("C2", cultureInfo); // Two decimals
+            }
         }
-        else
+        catch (Exception ex)
         {
-            return price.ToString("C2", cultureInfo); // Two decimals
+            logger.LogError(ex, "Could not format currency using CurrentUICulture.");
+            return price.ToString("C");
         }
     }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "Could not format currency using CurrentUICulture.");
-        return price.ToString("C");
-    }
-}
 
     public MarkupString GetNutritionInfo(decimal calories, decimal protein, decimal fat, decimal carbs, decimal sodium)
     {
@@ -372,4 +372,3 @@ private string FormatCurrency(decimal price)
         return NavigateUrl(); // Returns the current URL
     }
 }
-}}
