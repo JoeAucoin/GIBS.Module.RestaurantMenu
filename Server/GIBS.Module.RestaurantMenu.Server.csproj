@@ -11,6 +11,7 @@
     <Copyright>GIBS</Copyright>
     <AssemblyName>GIBS.Module.RestaurantMenu.Server.Oqtane</AssemblyName>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <RequireAspNetWebAssets>true</RequireAspNetWebAssets>
   </PropertyGroup>
 
   <ItemGroup>

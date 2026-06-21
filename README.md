@@ -3,6 +3,11 @@
 ## Overview
 The RestaurantMenu module provides a flexible way to display menus, categories, and menu items within an Oqtane-based site. It integrates seamlessly with Blazor and leverages standard Oqtane API endpoints for easy administration and customization.
 
+## .NET 10 Upgrade Notes
+- This version targets .NET 10 across the module projects.
+- Make sure the .NET 10 SDK is installed before restoring or building the solution.
+- If you are upgrading from an earlier release, clear any old bin and obj output and restore packages again to avoid stale assets.
+
 ## Key Features
 1. **Menus**  
    • Define separate menus, each with its own name, description, images, and availability times.  
